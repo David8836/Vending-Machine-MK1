@@ -10,11 +10,11 @@ class MachineConditionsUI:
         self.root = root
         self.root.title("Machine Conditions")
 
-        self.ICON_SNOW = load_icon("assets/icons/snow.png")
-        self.ICON_LEAF = load_icon("assets/icons/leaf.png")
-        self.ICON_SUN  = load_icon("assets/icons/sun.png")
-        self.ICON_WARN = load_icon("assets/icons/warning.png")
-        self.ICON_X    = load_icon("assets/icons/redx.png")
+        self.ICON_SNOW = load_icon("assets/icons/Cooled.png")
+        self.ICON_LEAF = load_icon("assets/icons/Normal.png")
+        self.ICON_SUN  = load_icon("assets/icons/Warm.png")
+        self.ICON_WARN = load_icon("assets/icons/Warning.png")
+        self.ICON_X    = load_icon("assets/icons/Temp_not_working.png")
         self.blank_icon = ImageTk.PhotoImage(Image.new("RGBA", (40, 40), (0, 0, 0, 0)))
 
         self.refrigeration_ok = True

@@ -1,6 +1,7 @@
 import tkinter as tk
-import sqlite3
 from config import DB_NAME
+from db import restock_item
+import sqlite3
 
 
 def connect():
@@ -19,8 +20,7 @@ class AdminUI:
         root.grid_columnconfigure(1, weight=2)
         root.grid_rowconfigure(0, weight=1)
 
-        # LEFT PANEL (machine list)
-
+        # LEFT PANEL
         left = tk.Frame(root)
         left.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
@@ -32,16 +32,14 @@ class AdminUI:
         self.machine_list.bind("<<ListboxSelect>>", self.load_machine)
 
         # RIGHT PANEL
-
         right = tk.Frame(root)
         right.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
 
         right.grid_rowconfigure(1, weight=1)
-        right.grid_rowconfigure(2, weight=1)
+        right.grid_rowconfigure(3, weight=1)
         right.grid_columnconfigure(0, weight=1)
 
-        # ADMIN INFO
-
+        # MACHINE INFO
         info_frame = tk.LabelFrame(right, text="Machine Info")
         info_frame.grid(row=0, column=0, sticky="ew", pady=5)
 
@@ -49,17 +47,32 @@ class AdminUI:
         self.info_label.pack(anchor="w", padx=10, pady=5)
 
         # STOCK PANEL
-
         stock_frame = tk.LabelFrame(right, text="Machine Stock")
         stock_frame.grid(row=1, column=0, sticky="nsew", pady=5)
 
         self.stock_list = tk.Listbox(stock_frame)
         self.stock_list.pack(fill="both", expand=True)
 
-        # STATS PANEL
+        # 🔥 RESTOCK PANEL (NEW)
+        restock_frame = tk.LabelFrame(right, text="Restock Item")
+        restock_frame.grid(row=2, column=0, sticky="ew", pady=5)
 
+        tk.Label(restock_frame, text="Item Code").grid(row=0, column=0, padx=5, pady=5)
+        self.item_code_entry = tk.Entry(restock_frame)
+        self.item_code_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(restock_frame, text="Amount").grid(row=0, column=2, padx=5, pady=5)
+        self.amount_entry = tk.Entry(restock_frame)
+        self.amount_entry.grid(row=0, column=3, padx=5, pady=5)
+
+        tk.Button(restock_frame, text="Restock", command=self.handle_restock).grid(row=0, column=4, padx=10, pady=5)
+
+        self.message_label = tk.Label(restock_frame, text="")
+        self.message_label.grid(row=1, column=0, columnspan=5, sticky="w", padx=5, pady=5)
+
+        # STATS PANEL
         stats_frame = tk.LabelFrame(right, text="Sales Statistics")
-        stats_frame.grid(row=2, column=0, sticky="nsew", pady=5)
+        stats_frame.grid(row=3, column=0, sticky="nsew", pady=5)
 
         self.stats_text = tk.Text(stats_frame, height=10)
         self.stats_text.pack(fill="both", expand=True)
@@ -74,7 +87,6 @@ class AdminUI:
         cur = conn.cursor()
 
         cur.execute("SELECT machine_id FROM machine_status")
-
         rows = cur.fetchall()
 
         conn.close()
@@ -86,7 +98,7 @@ class AdminUI:
 
     # --------------------------
 
-    def load_machine(self, event):
+    def load_machine(self, event=None):
 
         sel = self.machine_list.curselection()
 
@@ -99,7 +111,6 @@ class AdminUI:
         cur = conn.cursor()
 
         # MACHINE INFO
-
         cur.execute("""
         SELECT state, temperature, humidity
         FROM machine_status
@@ -115,7 +126,6 @@ class AdminUI:
             )
 
         # STOCK
-
         self.stock_list.delete(0, tk.END)
 
         cur.execute("""
@@ -128,7 +138,6 @@ class AdminUI:
             self.stock_list.insert(tk.END, f"{code} | {name} | Stock: {stock}")
 
         # STATS
-
         self.stats_text.delete("1.0", tk.END)
 
         cur.execute("""
@@ -138,7 +147,6 @@ class AdminUI:
         ORDER BY SUM(profit) DESC
         LIMIT 1
         """)
-
         best_profit = cur.fetchone()
 
         cur.execute("""
@@ -148,7 +156,6 @@ class AdminUI:
         ORDER BY COUNT(*) DESC
         LIMIT 1
         """)
-
         most_bought = cur.fetchone()
 
         cur.execute("""
@@ -158,7 +165,6 @@ class AdminUI:
         ORDER BY COUNT(*) ASC
         LIMIT 1
         """)
-
         least_bought = cur.fetchone()
 
         text = ""
@@ -175,6 +181,36 @@ class AdminUI:
         self.stats_text.insert(tk.END, text)
 
         conn.close()
+
+    # RESTOCK
+    def handle_restock(self):
+
+        item_code = self.item_code_entry.get().strip()
+        amount_text = self.amount_entry.get().strip()
+
+        if not item_code or not amount_text:
+            self.message_label.config(text="Enter item code and amount.")
+            return
+
+        try:
+            amount = int(amount_text)
+        except ValueError:
+            self.message_label.config(text="Amount must be a number.")
+            return
+
+        if amount <= 0:
+            self.message_label.config(text="Amount must be greater than 0.")
+            return
+
+        success = restock_item(item_code, amount)
+
+        if success:
+            self.message_label.config(text=f"Item {item_code} restocked by {amount}.")
+            self.item_code_entry.delete(0, tk.END)
+            self.amount_entry.delete(0, tk.END)
+            self.load_machine()
+        else:
+            self.message_label.config(text="Item code not found.")
 
 
 # ------------------------------

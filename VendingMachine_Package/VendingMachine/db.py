@@ -11,6 +11,7 @@ def init_db():
     conn = connect()
     cur = conn.cursor()
 
+
     cur.execute("""
     CREATE TABLE IF NOT EXISTS machine_status (
         machine_id TEXT PRIMARY KEY,

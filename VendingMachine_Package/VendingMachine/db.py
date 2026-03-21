@@ -110,15 +110,15 @@ def load_inventory_into_items(items):
             items[code]["stock"] = stock
 
 
-def reduce_stock(item_code):
+def restock_item(item_code, amount):
     conn = connect()
     cur = conn.cursor()
 
     cur.execute("""
     UPDATE inventory
-    SET stock = stock - 1
-    WHERE item_code = ? AND stock > 0
-    """, (item_code,))
+    SET stock = stock + ?
+    WHERE item_code = ?
+    """, (amount, item_code))
 
     conn.commit()
     success = cur.rowcount > 0

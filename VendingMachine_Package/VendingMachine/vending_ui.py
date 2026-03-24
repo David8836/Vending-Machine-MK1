@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+import time
 
 from data import itemsMaster, categories
 import machine_service
@@ -16,6 +17,9 @@ def start_ui():
     global status_frame, icon_label, status_text, temp_label, hum_label
 
     category_index = 0
+    last_sensor_update = 0
+    cached_temp = 0
+    cached_hum = 0
 
     root = tk.Tk()
     root.title("Vending Machine")
@@ -129,9 +133,20 @@ def start_ui():
     def cart_total():
         return sum(itemsMaster[c]["price"] for c in machine_service.cart)
 
+    def status_visible():
+        return current_category() == "Consumable"
+
+    def update_sensor_visibility():
+        if status_visible():
+            status_frame.grid(row=0, column=1, sticky="e", padx=10)
+        else:
+            status_frame.grid_remove()
+
     def update_action_states():
         cart_has_items = len(machine_service.cart) > 0
-        can_checkout = cart_has_items and status_text.cget("text") != "CRITICAL"
+        can_checkout = cart_has_items and (
+            not status_visible() or status_text.cget("text") != "CRITICAL"
+        )
 
         checkout_btn.config(state="normal" if can_checkout else "disabled")
         remove_btn.config(state="normal" if cart_has_items else "disabled")
@@ -159,6 +174,7 @@ def start_ui():
 
         balance_label.config(text=f"Balance: ${machine_service.balance:.2f}")
         cost_label.config(text=f"Cost: ${cart_total():.2f}")
+        update_sensor_visibility()
         update_action_states()
 
     def add_selected():
@@ -189,7 +205,7 @@ def start_ui():
     def checkout_items():
         current_state = status_text.cget("text")
 
-        if current_state == "CRITICAL":
+        if status_visible() and current_state == "CRITICAL":
             messagebox.showerror("Error", "Machine is in CRITICAL status. Checkout disabled.")
             return
 
@@ -218,6 +234,7 @@ def start_ui():
         machine_service.reset_stock_to_data()
         update_display()
         messagebox.showinfo("Reset Stock", "Stock reset from data.py")
+
 
     def next_category():
         global category_index
@@ -266,7 +283,15 @@ def start_ui():
     return_btn.grid(row=0, column=2)
 
     def update_conditions():
-        temp, hum = read_sensors()
+        nonlocal last_sensor_update, cached_temp, cached_hum
+
+        current_time = time.time()
+
+        if current_time - last_sensor_update >= 30:
+            cached_temp, cached_hum = read_sensors()
+            last_sensor_update = current_time
+
+        temp, hum = cached_temp, cached_hum
 
         temp_label.config(text=f"{temp:.1f}°F")
         hum_label.config(text=f"{hum:.0f}%")
@@ -302,6 +327,7 @@ def start_ui():
             temp_label.config(bg="#E74C3C")
             hum_label.config(bg="#E74C3C")
 
+        update_sensor_visibility()
         update_action_states()
         root.after(2000, update_conditions)
 

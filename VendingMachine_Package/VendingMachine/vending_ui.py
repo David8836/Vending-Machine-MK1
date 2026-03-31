@@ -235,7 +235,6 @@ def start_ui():
         update_display()
         messagebox.showinfo("Reset Stock", "Stock reset from data.py")
 
-
     def next_category():
         global category_index
         category_index = (category_index + 1) % len(categories)
@@ -246,8 +245,140 @@ def start_ui():
         category_index = (category_index - 1) % len(categories)
         update_display()
 
+    ADMIN_PIN = "1999"
+    ADMIN_NAME = "D&E"
+    MACHINE_NAME = "VM001"
+    SERIAL_NUMBER = "SN-VM-001"
+
+    def show_admin_info():
+        info_window = tk.Toplevel(root)
+        info_window.title("Admin Panel")
+        info_window.resizable(False, False)
+
+        info_frame = tk.Frame(info_window, padx=20, pady=20)
+        info_frame.pack()
+
+        tk.Label(
+            info_frame,
+            text="Admin Access Granted",
+            font=("Arial", 14, "bold")
+        ).pack(pady=(0, 12))
+
+        tk.Label(
+            info_frame,
+            text=f"Admin Name: {ADMIN_NAME}",
+            font=("Arial", 12)
+        ).pack(anchor="w", pady=2)
+
+        tk.Label(
+            info_frame,
+            text=f"Machine Name: {MACHINE_NAME}",
+            font=("Arial", 12)
+        ).pack(anchor="w", pady=2)
+
+        tk.Label(
+            info_frame,
+            text=f"Serial Number: {SERIAL_NUMBER}",
+            font=("Arial", 12)
+        ).pack(anchor="w", pady=2)
+
+        make_button(
+            info_frame,
+            "Close",
+            "#95A5A6",
+            "#7F8C8D",
+            info_window.destroy,
+            width=10
+        ).pack(pady=(12, 0))
+
+    def open_admin_keypad():
+        pin_window = tk.Toplevel(root)
+        pin_window.title("Admin Access")
+        pin_window.resizable(False, False)
+        pin_window.grab_set()
+
+        pin_value = tk.StringVar(value="")
+
+        container = tk.Frame(pin_window, padx=15, pady=15)
+        container.pack()
+
+        tk.Label(
+            container,
+            text="Enter Admin PIN",
+            font=("Arial", 12, "bold")
+        ).grid(row=0, column=0, columnspan=3, pady=(0, 10))
+
+        pin_entry = tk.Entry(
+            container,
+            textvariable=pin_value,
+            font=("Arial", 16),
+            justify="center",
+            show="*",
+            state="readonly",
+            width=10
+        )
+        pin_entry.grid(row=1, column=0, columnspan=3, pady=(0, 10))
+
+        def press_digit(digit):
+            current = pin_value.get()
+            if len(current) < 4:
+                pin_value.set(current + str(digit))
+
+        def clear_pin():
+            pin_value.set("")
+
+        def delete_last():
+            pin_value.set(pin_value.get()[:-1])
+
+        def submit_pin():
+            if pin_value.get() == ADMIN_PIN:
+                pin_window.destroy()
+                show_admin_info()
+            else:
+                messagebox.showerror("Access Denied", "Incorrect PIN")
+                clear_pin()
+
+        keypad = [
+            ("1", 2, 0), ("2", 2, 1), ("3", 2, 2),
+            ("4", 3, 0), ("5", 3, 1), ("6", 3, 2),
+            ("7", 4, 0), ("8", 4, 1), ("9", 4, 2),
+            ("Clear", 5, 0), ("0", 5, 1), ("Del", 5, 2),
+        ]
+
+        for label, row, col in keypad:
+            if label == "Clear":
+                cmd = clear_pin
+                width = 8
+            elif label == "Del":
+                cmd = delete_last
+                width = 8
+            else:
+                cmd = lambda x=label: press_digit(x)
+                width = 8
+
+            make_button(
+                container,
+                label,
+                "#34495E",
+                "#2C3E50",
+                cmd,
+                width=width
+            ).grid(row=row, column=col, padx=3, pady=3)
+
+        make_button(
+            container,
+            "Enter",
+            "#2ECC71",
+            "#27AE60",
+            submit_pin,
+            width=12
+        ).grid(row=6, column=0, columnspan=3, pady=(10, 0))
+
     back_btn = make_button(left_buttons, "Back", "#95A5A6", "#7F8C8D", prev_category, width=10)
     back_btn.grid(row=0, column=0, sticky="w", padx=(1, 1))
+
+    admin_btn = make_button(left_buttons, "Admin Access", "#1ABC9C", "#16A085", open_admin_keypad, width=12)
+    admin_btn.grid(row=1, column=0, sticky="w", padx=(1, 1), pady=(6, 0))
 
     next_btn = make_button(left_buttons, "Next", "#95A5A6", "#7F8C8D", next_category, width=10)
     next_btn.grid(row=0, column=1, padx=(1, 1))

@@ -29,6 +29,14 @@ def start_ui():
     ICON_WARNING = load_icon("assets/icons/Warning.png")
     ICON_CRITICAL = load_icon("assets/icons/Temp_not_working.png")
 
+    ITEM_LOGOS = {
+        "Pepsi": "assets/logos/pepsi.png",
+        "Doritos Nacho Cheese": "assets/logos/doritos.png",
+        "Gatorade Cool Blue": "assets/logos/gatorade.png",
+        "Oreo Cookies": "assets/logos/oreo.png",
+        "Dasani Water": "assets/logos/dasani.png"
+    }
+
     root.grid_columnconfigure(0, weight=1)
     root.grid_columnconfigure(1, weight=1)
     root.grid_rowconfigure(1, weight=1)
@@ -87,12 +95,18 @@ def start_ui():
     left.grid_columnconfigure(0, weight=1)
     left.grid_rowconfigure(1, weight=1)
 
+    header_frame = tk.Frame(left)
+    header_frame.grid(row=0, column=0, sticky="w")
+
     product_type_label = tk.Label(
-        left,
+        header_frame,
         text="Product Type: Consumable",
         font=("Arial", 12, "bold")
     )
-    product_type_label.grid(row=0, column=0, sticky="w")
+    product_type_label.pack(side="left")
+
+    selected_item_logo_label = tk.Label(header_frame)
+    selected_item_logo_label.pack(side="left", padx=(12, 0))
 
     listbox = tk.Listbox(left, width=50, height=15)
     listbox.grid(row=1, column=0, sticky="nsew", pady=(5, 10))
@@ -151,6 +165,37 @@ def start_ui():
         checkout_btn.config(state="normal" if can_checkout else "disabled")
         remove_btn.config(state="normal" if cart_has_items else "disabled")
 
+    def clear_selected_logo():
+        selected_item_logo_label.config(image="", text="")
+        selected_item_logo_label.image = None
+
+    def update_selected_logo(event=None):
+        sel = listbox.curselection()
+
+        if not sel:
+            clear_selected_logo()
+            return
+
+        code = listbox.get(sel[0]).split(" | ")[0]
+        item = itemsMaster[code]
+
+        if item["category"] != "Consumable":
+            clear_selected_logo()
+            return
+
+        logo_path = ITEM_LOGOS.get(item["name"])
+
+        if not logo_path:
+            clear_selected_logo()
+            return
+
+        try:
+            logo_image = load_icon(logo_path, size=45)
+            selected_item_logo_label.config(image=logo_image, text="")
+            selected_item_logo_label.image = logo_image
+        except Exception:
+            clear_selected_logo()
+
     def update_display():
         machine_service.refresh_inventory()
 
@@ -176,6 +221,7 @@ def start_ui():
         cost_label.config(text=f"Cost: ${cart_total():.2f}")
         update_sensor_visibility()
         update_action_states()
+        clear_selected_logo()
 
     def add_selected():
         sel = listbox.curselection()
@@ -412,6 +458,8 @@ def start_ui():
 
     return_btn = make_button(bottom, "Return", "#F39C12", "#D68910", return_change_and_refresh, width=12)
     return_btn.grid(row=0, column=2)
+
+    listbox.bind("<<ListboxSelect>>", update_selected_logo)
 
     def update_conditions():
         nonlocal last_sensor_update, cached_temp, cached_hum
